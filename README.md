@@ -34,6 +34,11 @@
   - I believe it is simpler to add users via a script rather than adding additional logic, classes, and types to manage them 
   - likewise, as the assignment stands, user management is not required
 
+### Optimistic Locking 
+- Optimistic locking is a good approach to ensuring concurrent writes are not overwritten by each other. Using an incremental version instead of timestamps is both simpler, and it avoids server time drifts.
+- If pessimistic locking were used, many users would not be able to efficiently view the same task as it would be locked on a read level. 
+- Downstream, optimistic locking prevents deadlocks as the lock is not acquired at read level.
+
 ## Testing
 
 ### Limitations

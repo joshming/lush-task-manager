@@ -1,6 +1,4 @@
-from datetime import datetime
-
-from sqlalchemy import Enum, Text, ForeignKey, DateTime, func, BigInteger
+from sqlalchemy import Enum, Text, ForeignKey, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.enums import TaskStatus, Priority

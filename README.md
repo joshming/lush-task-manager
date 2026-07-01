@@ -16,6 +16,7 @@
 - Authentication (even if stubbed)
 - Runnability
 - Data migrations (rollbacks too)
+- Typed Errors (no straight 500s or leaked stacktraces)
 
 ## Feature Priorities
 1. Project and Task lifecycle (create, link, assign, unassign, delete)
@@ -25,3 +26,10 @@
 3. Data Loader / N + 1 prevention 
 4. Typed errors
 5. Filter/Sort (project, status, assignee, creation date)
+
+## Testing
+
+### Limitations
+
+An SQLlite in-memory database will be used instead of a TestContainer or actual instance of Postgres.
+This has been done due to simplicity of testing with no containers needed to be spun up and the time limitations as this provides faster implementation and the extra features of postgres are not required for these testing purposes.

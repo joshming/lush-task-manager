@@ -43,3 +43,9 @@ class TaskMutation:
 
         task_service = request.context.task_service
         return await task_service.update_task(task_id, update_request)
+
+    @strawberry.mutation
+    async def delete_task(self, request: Info[TaskManagementContext, None], task_id: int) -> Task:
+        task_service = request.context.task_service
+        user_id = request.context.current_user
+        return await task_service.delete_task(task_id, user_id)

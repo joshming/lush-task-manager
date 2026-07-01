@@ -7,7 +7,7 @@ from app import ProjectDAO, TaskDAO, User
 from app.enums import TaskStatus
 from app.graphql.types.task import Task
 from app.schemas.task import CreateTask, UpdateTask
-from app.services.entity_exceptions import ProjectNotFound, UserNotFound
+from app.services.entity_exceptions import ProjectNotFound, UserNotFound, UnauthorizedTaskException
 from app.services.entity_exceptions import TaskNotFound
 
 
@@ -20,6 +20,7 @@ def create_task(task_dao: TaskDAO) -> Task:
         status=task_dao.status,
         project_id=task_dao.project_id,
         assigned_to=task_dao.assigned_to,
+        created_by=task_dao.created_by,
         created_at=task_dao.created_at,
         updated_at=task_dao.updated_at
     )
@@ -99,5 +100,19 @@ class TaskService:
         task_dao.updated_at = now_utc()
         await self._db.commit()
         await self._db.refresh(task_dao)
+
+        return create_task(task_dao)
+
+    async def delete_task(self, task_id: int, user_id: int) -> Task:
+        task_dao = await self._db.get(TaskDAO, task_id)
+
+        if not task_dao:
+            raise TaskNotFound(f"No task exists with id {task_id}")
+
+        if task_dao.created_by != user_id:
+            raise UnauthorizedTaskException(f"You cannot delete the task")
+
+        await self._db.delete(task_dao)
+        await self._db.commit()
 
         return create_task(task_dao)

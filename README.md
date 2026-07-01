@@ -39,6 +39,9 @@
 - If pessimistic locking were used, many users would not be able to efficiently view the same task as it would be locked on a read level. 
 - Downstream, optimistic locking prevents deadlocks as the lock is not acquired at read level.
 
+### Heavy integration testing 
+- With the requirements of this application, there are not many components that have meaningful areas to unit test. More value comes from integration tests that can test the flow from request to datbase.
+
 ## Testing
 
 ### Limitations

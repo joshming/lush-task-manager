@@ -17,6 +17,7 @@ class Task:
     status: Status
     project_id: int
     assigned_to: int | None
+    created_by: int
     created_at: datetime
     updated_at: datetime
 

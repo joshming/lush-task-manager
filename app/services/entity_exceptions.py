@@ -9,3 +9,9 @@ class ProjectNotFound(NotFoundException):
 
 class UserNotFound(NotFoundException):
     pass
+
+class UnauthorizedException(Exception):
+    pass
+
+class UnauthorizedTaskException(UnauthorizedException):
+    pass

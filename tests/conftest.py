@@ -31,7 +31,8 @@ async def get_async_session_maker(engine: AsyncEngine) -> async_sessionmaker[Asy
 
 
 @pytest_asyncio.fixture
-async def db_session(engine: AsyncEngine, get_async_session_maker: async_sessionmaker[AsyncSession]) -> AsyncGenerator[Any, Any]:
+async def db_session(engine: AsyncEngine, get_async_session_maker: async_sessionmaker[AsyncSession]) -> AsyncGenerator[
+    Any, Any]:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -44,21 +45,16 @@ async def db_session(engine: AsyncEngine, get_async_session_maker: async_session
 
 @pytest_asyncio.fixture
 async def client(db_session):
-    # Override get_db to use test session
     async def override_get_db():
         yield db_session
 
-    # Override auth to return a stub user
-    async def override_get_current_user():
-        return 1
-
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = override_get_current_user
 
     async with AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://test"
     ) as client:
+        client.headers.__setitem__("X-User-Id", "1")
         yield client
 
     app.dependency_overrides.clear()

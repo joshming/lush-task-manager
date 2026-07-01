@@ -37,6 +37,17 @@ UPDATE_TASK_MUTATION = """
 """
 
 
+DELETE_TASK_MUTATION = """
+    mutation DeleteTask($taskId: Int!) {
+        deleteTask(taskId: $taskId) {
+            id
+            title
+            createdBy
+        }
+    }
+"""
+
+
 class TestTaskMutations:
 
     async def test_create_task_valid_input(self, client: AsyncClient, project: int):
@@ -95,3 +106,33 @@ class TestTaskMutations:
                     await session2.commit()
                 except Exception as e:
                     assert type(e) is StaleDataError
+
+    async def test_update_task_fresh(self, client: AsyncClient, task: int):
+        response = await client.post("/tasks", json={
+            "query": UPDATE_TASK_MUTATION,
+            "variables": {"taskId": task, "description": "Updated description"},
+        })
+
+        data = response.json()
+        assert "errors" not in data
+        assert data["data"]["updateTask"]["description"] == "Updated description"
+
+    async def test_delete_task_owned(self, client: AsyncClient, task: int):
+        response = await client.post("/tasks", json={
+            "query": DELETE_TASK_MUTATION,
+            "variables": {"taskId": task},
+        })
+
+        data = response.json()
+        assert "errors" not in data
+        assert data["data"]["deleteTask"]["createdBy"] is 1
+
+    async def test_delete_task_unowned(self, client: AsyncClient, task: int):
+        client.headers.__setitem__("X-User-Id", "2")
+        response = await client.post("/tasks", json={
+            "query": DELETE_TASK_MUTATION,
+            "variables": {"taskId": task},
+        })
+
+        data = response.json()
+        assert "errors" in data

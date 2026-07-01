@@ -27,6 +27,13 @@
 4. Typed errors
 5. Filter/Sort (project, status, assignee, creation date)
 
+## Design Decisions 
+
+### Users 
+- I Decided to leave out GraphQL and CRUD logic around users. This was done to focus on the project and task management. 
+  - I believe it is simpler to add users via a script rather than adding additional logic, classes, and types to manage them 
+  - likewise, as the assignment stands, user management is not required
+
 ## Testing
 
 ### Limitations

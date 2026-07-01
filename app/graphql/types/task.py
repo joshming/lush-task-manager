@@ -19,3 +19,12 @@ class Task:
     assigned_to: int | None
     created_at: datetime
     updated_at: datetime
+
+
+@strawberry.input
+class UpdateTaskInput:
+    title: str | None = None
+    description: str | None = None
+    assigned_user: int | None = None
+    priority: Priority | None = None
+    status: Status | None = None

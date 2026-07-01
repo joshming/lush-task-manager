@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:17-alpine
-    container_name: postgres_17
+    container_name: lush_database
     restart: always
     environment:
       POSTGRES_USER: 'lush'

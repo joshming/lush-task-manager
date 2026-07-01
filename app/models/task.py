@@ -28,3 +28,9 @@ class Task(TimeTracked, Base):
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    version: Mapped[int] = mapped_column(server_default="1")
+
+    __mapper_args__ = {
+        "version_id_col": version,
+        "version_id_generator": lambda v: 1 if not v else v + 1,
+    }

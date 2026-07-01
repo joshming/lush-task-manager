@@ -1,7 +1,9 @@
+from typing import List, Any, AsyncGenerator
+
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncEngine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.types import BigInteger
 
@@ -19,13 +21,21 @@ def compile_big_int_sqlite(type_, compiler, **kw):
 
 
 @pytest_asyncio.fixture
-async def db_session():
-    engine = create_async_engine(TEST_DATABASE_URL)
+async def engine() -> AsyncEngine:
+    return create_async_engine(TEST_DATABASE_URL)
+
+
+@pytest_asyncio.fixture
+async def get_async_session_maker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+@pytest_asyncio.fixture
+async def db_session(engine: AsyncEngine, get_async_session_maker: async_sessionmaker[AsyncSession]) -> AsyncGenerator[Any, Any]:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    TestSession = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    async with TestSession() as session:
+    async with get_async_session_maker() as session:
         yield session
 
     async with engine.begin() as conn:
@@ -53,8 +63,9 @@ async def client(db_session):
 
     app.dependency_overrides.clear()
 
+
 @pytest.fixture
-async def project(client):
+async def project(client: AsyncClient) -> int:
     project = await client.post("/tasks", json={
         "query": """
             mutation {
@@ -66,8 +77,45 @@ async def project(client):
     })
     return project.json()["data"]["createProject"]["id"]
 
+
 @pytest.fixture
-async def task(client, project: int):
+async def projects(client: AsyncClient) -> List[int]:
+    p1 = await client.post("/tasks", json={
+        "query": """
+            mutation {
+                createProject(input: { title: "Test Project 1" }) {
+                    id
+                }
+            }
+        """
+    })
+
+    p2 = await client.post("/tasks", json={
+        "query": """
+            mutation {
+                createProject(input: { title: "Test Project 2" }) {
+                    id
+                }
+            }
+        """
+    })
+
+    p3 = await client.post("/tasks", json={
+        "query": """
+            mutation {
+                createProject(input: { title: "Test Project 3" }) {
+                    id
+                }
+            }
+        """
+    })
+
+    return [p1.json()["data"]["createProject"]["id"], p2.json()["data"]["createProject"]["id"],
+            p3.json()["data"]["createProject"]["id"]]
+
+
+@pytest.fixture
+async def task(client: AsyncClient, project: int) -> int:
     task = await client.post("/tasks", json={
         "query": """
             mutation {
@@ -79,3 +127,42 @@ async def task(client, project: int):
     })
 
     return task.json()["data"]["createTask"]["id"]
+
+
+@pytest.fixture
+async def tasks(client: AsyncClient, projects: List[int]) -> List[int]:
+    t1 = await client.post("/tasks", json={
+        "query": """
+                mutation {
+                    createTask(input: { title: "test task 1", projectId: 1 }) {
+                        id
+                    }
+                }
+            """
+    })
+
+    t2 = await client.post("/tasks", json={
+        "query": """
+                mutation {
+                    createTask(input: { title: "test task 2", projectId: 2 }) {
+                        id
+                    }
+                }
+            """
+    })
+
+    t3 = await client.post("/tasks", json={
+        "query": """
+                mutation {
+                    createTask(input: { title: "test task 3", projectId: 3 }) {
+                        id
+                    }
+                }
+            """
+    })
+
+    return [
+        t1.json()["data"]["createTask"]["id"],
+        t2.json()["data"]["createTask"]["id"],
+        t3.json()["data"]["createTask"]["id"],
+    ]

@@ -8,7 +8,13 @@ from app.graphql.types.task import Task
 @strawberry.type
 class TaskQuery:
     @strawberry.field
-    async def task(self, id_: int, request: Info[TaskManagementContext, None]) -> Task | None:
+    async def task(self, id_: int, request: Info[TaskManagementContext, None]) -> Task:
         task_service = request.context.task_service
 
         return await task_service.get_task_by_id(id_)
+
+    @strawberry.field
+    async def tasks(self, request: Info[TaskManagementContext, None]) -> list[Task]:
+        task_service = request.context.task_service
+
+        return await task_service.get_tasks()

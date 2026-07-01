@@ -15,3 +15,6 @@ class UnauthorizedException(Exception):
 
 class UnauthorizedTaskException(UnauthorizedException):
     pass
+
+class UnauthorizedProjectException(UnauthorizedException):
+    pass

@@ -1,3 +1,5 @@
+from typing import List
+
 import strawberry
 from strawberry.types import Info
 
@@ -14,7 +16,7 @@ class TaskQuery:
         return await task_service.get_task_by_id(id_)
 
     @strawberry.field
-    async def tasks(self, request: Info[TaskManagementContext, None]) -> list[Task]:
+    async def tasks(self, request: Info[TaskManagementContext, None]) -> List[Task]:
         task_service = request.context.task_service
 
         return await task_service.get_tasks()

@@ -15,3 +15,9 @@ class Project:
     created_by: int
     created_date: datetime
     updated_date: datetime
+
+@strawberry.input
+class UpdateProjectInput:
+    title: str | None = None
+    description: str | None = None
+    status: Status | None = None

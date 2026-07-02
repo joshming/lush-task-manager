@@ -1,8 +1,10 @@
+from typing import List
+
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm.exc import StaleDataError
 
-from app import TaskDAO
+from app import TaskDAO, ProjectDAO
 
 CREATE_TASK_MUTATION = """
     mutation CreateTask($title: String!, $description: String, $projectId: Int!) {
@@ -14,7 +16,6 @@ CREATE_TASK_MUTATION = """
             description
             priority
             status
-            projectId
             assignedTo
             createdAt
             updatedAt
@@ -23,10 +24,10 @@ CREATE_TASK_MUTATION = """
 """
 
 UPDATE_TASK_MUTATION = """
-    mutation UpdateTask($taskId: Int!, $description: String!) {
+    mutation UpdateTask($taskId: Int!, $description: String, $title: String) {
         updateTask(
             taskId: $taskId,
-            updateInput: { description: $description}
+            updateInput: { description: $description, title: $title }
         ) {
             id
             title
@@ -136,3 +137,17 @@ class TestTaskMutations:
 
         data = response.json()
         assert "errors" in data
+
+    async def test_update_task_stale_data_project_deleted_then_stale_data(self, get_async_session_maker: async_sessionmaker[AsyncSession], task: int, project: int):
+        async with get_async_session_maker() as session:
+            async with get_async_session_maker() as session2:
+                task = await session.get(TaskDAO, task)
+                project = await session2.get(ProjectDAO, project)
+                await session2.delete(project)
+                await session2.commit()
+
+                try:
+                    task.description = "Updated description"
+                    await session.commit()
+                except Exception as e:
+                    assert type(e) is StaleDataError

@@ -24,7 +24,15 @@ def compile_big_int_sqlite(type_, compiler, **kw):
 
 @pytest_asyncio.fixture
 async def engine() -> AsyncEngine:
-    return create_async_engine(TEST_DATABASE_URL, echo=False)
+    engine = create_async_engine(TEST_DATABASE_URL)
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    return engine
 
 
 @pytest_asyncio.fixture
@@ -171,10 +179,21 @@ async def tasks(client: AsyncClient, projects: List[int], users: List[int]) -> L
             """
     })
 
+    t4 = await client.post("/tasks", json={
+        "query": """
+            mutation {
+                createTask(input: { title: "test task 4", projectId: 3 }) {
+                    id
+                }
+            }
+        """
+    })
+
     tasks = [
         t1.json()["data"]["createTask"]["id"],
         t2.json()["data"]["createTask"]["id"],
         t3.json()["data"]["createTask"]["id"],
+        t4.json()["data"]["createTask"]["id"],
     ]
 
     for task in tasks:
@@ -189,8 +208,6 @@ async def tasks(client: AsyncClient, projects: List[int], users: List[int]) -> L
             """,
             "variables": {"task_id": task, "assignedUser": 1}
         })
-
-        assigned_task.json()["data"]["updateTask"]["id"]
 
     return tasks
 

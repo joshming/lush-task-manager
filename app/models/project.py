@@ -1,4 +1,4 @@
-from sqlalchemy import Text, Enum, ForeignKey, BigInteger
+from sqlalchemy import Text, Enum, ForeignKey, BigInteger, Index, func, text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimeTracked
@@ -16,3 +16,8 @@ class Project(TimeTracked, Base):
         default=ProjectStatus.OPEN
     )
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    normalized_title: Mapped[str] = mapped_column(nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("normalized_title", "created_by"),
+    )

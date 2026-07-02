@@ -42,9 +42,19 @@
 ### Heavy integration testing 
 - With the requirements of this application, there are not many components that have meaningful areas to unit test. More value comes from integration tests that can test the flow from request to datbase.
 
+### Unique Title + project_id / created_by for tasks / projects
+- It makes sense that for a given project, there could be multiple projects with the same title but different users (each could have a project for their own)
+  - It doesn't make sense for a user to have multiple projects with the same name
+  - A project should be re-opened if a user needs the same one 
+- For a given project, multiple tasks with the same name doesn't make sense, instead they should be unique within a project
+- A functional index would have been ideal to get rid of the necessity of a "normalized" title field that's been set to lower case. However, due to SQLite testing set up and time limitations, normalized_title short-cut was taken instead
+
 ## Testing
 
 ### Limitations
 
+#### SQLite
 An SQLlite in-memory database will be used instead of a TestContainer or actual instance of Postgres.
 This has been done due to simplicity of testing with no containers needed to be spun up and the time limitations as this provides faster implementation and the extra features of postgres are not required for these testing purposes.
+
+Integrity error tests have been omitted. This is because SQLite raises different exception types. I could test via sql state however, that seems more unclear than catching the postgres database exceptions from the postgres driver.

@@ -1,13 +1,15 @@
 from typing import List
 
+from asyncpg import UniqueViolationError
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import ProjectDAO
 from app.enums import ProjectStatus
 from app.graphql.types.project import Project
 from app.schemas.project import CreateProject, UpdateProject
-from app.services.entity_exceptions import ProjectNotFound, UnauthorizedProjectException
+from app.services.entity_exceptions import ProjectNotFound, UnauthorizedProjectException, DuplicateProjectException
 
 
 def create_project(project_dao: ProjectDAO) -> Project:
@@ -33,10 +35,20 @@ class ProjectService:
             description=project_request.description,
             created_by=user_id,
             status=ProjectStatus.OPEN,
+            normalized_title=project_request.title.lower().strip()
         )
 
-        self._db.add(project_dao)
-        await self._db.commit()
+        try:
+            self._db.add(project_dao)
+            await self._db.commit()
+        except IntegrityError as e:
+            await self._db.rollback()
+
+            original = e.orig.__cause__ if e.orig else None
+            if isinstance(original, UniqueViolationError):
+                raise DuplicateProjectException(f"Project with title {project_request.title} already exists.")
+            raise e
+
         await self._db.refresh(project_dao)
         return create_project(project_dao)
 
@@ -51,6 +63,7 @@ class ProjectService:
 
         if update_project.title:
             project_dao.title = update_project.title
+            project_dao.normalized_title = update_project.title.lower().strip()
 
         if update_project.description:
             project_dao.description = update_project.description
@@ -58,7 +71,16 @@ class ProjectService:
         if update_project.status:
             project_dao.status = update_project.status
 
-        await self._db.commit()
+        try:
+            await self._db.commit()
+        except IntegrityError as e:
+            await self._db.rollback()
+            original = e.orig.__cause__ if e.orig else None
+
+            if isinstance(original, UniqueViolationError):
+                raise DuplicateProjectException(f"Project with title {update_project.title} already exists.")
+            raise e
+
         await self._db.refresh(project_dao)
         return create_project(project_dao)
 

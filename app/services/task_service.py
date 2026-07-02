@@ -1,14 +1,18 @@
 from datetime import datetime, timezone
 from typing import Any
 
+from asyncpg import ForeignKeyViolationError, UniqueViolationError
 from sqlalchemy import select, Select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.exc import StaleDataError
 
-from app import ProjectDAO, TaskDAO, User
+from app import TaskDAO, User
 from app.enums import TaskStatus
 from app.graphql.types.task import Task
 from app.schemas.task import CreateTask, UpdateTask, TaskFilter
-from app.services.entity_exceptions import ProjectNotFound, UserNotFound, UnauthorizedTaskException
+from app.services.entity_exceptions import ProjectNotFound, UserNotFound, UnauthorizedTaskException, \
+    DuplicateTaskException, RefreshException
 from app.services.entity_exceptions import TaskNotFound
 
 
@@ -79,21 +83,29 @@ class TaskService:
         return [create_task(task_dao) for task_dao in task_daos]
 
     async def create_task(self, user: int, task_request: CreateTask) -> Task:
-        project = await self._db.get(ProjectDAO, task_request.project)
-        if not project:
-            raise ProjectNotFound(f"No project exists with {task_request.project}")
-
         task_dao = TaskDAO(
             title=task_request.title,
             description=task_request.description,
             status=TaskStatus.TODO,
             priority=task_request.priority,
             project_id=task_request.project,
-            created_by=user
+            created_by=user,
+            normalized_title=task_request.title.lower().strip()
         )
 
-        self._db.add(task_dao)
-        await self._db.commit()
+        try:
+            self._db.add(task_dao)
+            await self._db.commit()
+        except IntegrityError as e:
+            await self._db.rollback()
+            original = e.orig.__cause__ if e.orig else None
+            print(f"original error {type(original)}")
+            if isinstance(original, ForeignKeyViolationError):
+                raise ProjectNotFound(f"No project exists with {task_request.project}")
+            elif isinstance(original, UniqueViolationError):
+                raise DuplicateTaskException(f"A task with title {task_request.title} already exists")
+            raise e
+
         await self._db.refresh(task_dao)
 
         return create_task(task_dao)
@@ -106,6 +118,7 @@ class TaskService:
 
         if task_request.title:
             task_dao.title = task_request.title
+            task_dao.normalized_title = task_request.title.lower().strip()
 
         if task_request.description:
             task_dao.description = task_request.description
@@ -117,13 +130,24 @@ class TaskService:
             task_dao.status = task_request.status
 
         if task_request.assigned_user:
-            user_dao = await self._db.get(User, task_request.assigned_user)
-            if not user_dao:
-                raise UserNotFound(f"No user exists with id {task_request.assigned_user}")
             task_dao.assigned_to = task_request.assigned_user
 
         task_dao.updated_at = now_utc()
-        await self._db.commit()
+        try:
+            await self._db.commit()
+        except IntegrityError as e:
+            await self._db.rollback()
+            original = e.orig.__cause__ if e.orig else None
+
+            if isinstance(original, ForeignKeyViolationError):
+                raise UserNotFound(f"No user exists with id {task_request.assigned_user}")
+            elif isinstance(original, UniqueViolationError):
+                raise DuplicateTaskException(f"A task with title {task_request.title} already exists")
+            raise e
+        except StaleDataError:
+            await self._db.rollback()
+            raise RefreshException(f"Please refresh, task {task_dao.title} has been edited already.")
+
         await self._db.refresh(task_dao)
 
         return create_task(task_dao)

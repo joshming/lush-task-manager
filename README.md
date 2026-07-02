@@ -58,3 +58,5 @@ An SQLlite in-memory database will be used instead of a TestContainer or actual 
 This has been done due to simplicity of testing with no containers needed to be spun up and the time limitations as this provides faster implementation and the extra features of postgres are not required for these testing purposes.
 
 Integrity error tests have been omitted. This is because SQLite raises different exception types. I could test via sql state however, that seems more unclear than catching the postgres database exceptions from the postgres driver.
+
+Testing for similar cases (e.g. sorting by Status vs Priority or ID vs Project_ID) were omitted for time. In a real-world I'd implement them, however, to save on time, I omitted them as they logically follow the same rules 

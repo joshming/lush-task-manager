@@ -83,7 +83,7 @@ async def users(db_session: AsyncSession) -> List[int]:
 
 
 @pytest.fixture
-async def project(client: AsyncClient) -> int:
+async def project(client: AsyncClient, users: List[int]) -> int:
     project = await client.post("/tasks", json={
         "query": """
             mutation {
@@ -97,7 +97,7 @@ async def project(client: AsyncClient) -> int:
 
 
 @pytest.fixture
-async def projects(client: AsyncClient) -> List[int]:
+async def projects(client: AsyncClient, users: List[int]) -> List[int]:
     p1 = await client.post("/tasks", json={
         "query": """
             mutation {
@@ -182,7 +182,7 @@ async def tasks(client: AsyncClient, projects: List[int], users: List[int]) -> L
     t4 = await client.post("/tasks", json={
         "query": """
             mutation {
-                createTask(input: { title: "test task 4", projectId: 3 }) {
+                createTask(input: { title: "test task 4", projectId: 3, priority: HIGH }) {
                     id
                 }
             }
@@ -208,6 +208,70 @@ async def tasks(client: AsyncClient, projects: List[int], users: List[int]) -> L
             """,
             "variables": {"task_id": task, "assignedUser": 1}
         })
+
+    return tasks
+
+
+@pytest.fixture
+async def some_assigned_tasks(client: AsyncClient, projects: List[int], users: List[int]) -> List[int]:
+    t1 = await client.post("/tasks", json={
+        "query": """
+                mutation {
+                    createTask(input: { title: "test task 1", projectId: 1 }) {
+                        id
+                    }
+                }
+            """
+    })
+
+    t2 = await client.post("/tasks", json={
+        "query": """
+                mutation {
+                    createTask(input: { title: "test task 2", projectId: 2 }) {
+                        id
+                    }
+                }
+            """
+    })
+
+    t3 = await client.post("/tasks", json={
+        "query": """
+                mutation {
+                    createTask(input: { title: "test task 3", projectId: 3 }) {
+                        id
+                    }
+                }
+            """
+    })
+
+    t4 = await client.post("/tasks", json={
+        "query": """
+            mutation {
+                createTask(input: { title: "test task 4", projectId: 3 }) {
+                    id
+                }
+            }
+        """
+    })
+
+    tasks = [
+        t1.json()["data"]["createTask"]["id"],
+        t2.json()["data"]["createTask"]["id"],
+        t3.json()["data"]["createTask"]["id"],
+        t4.json()["data"]["createTask"]["id"],
+    ]
+
+    await client.post("/tasks", json={
+        "query": """
+            mutation UpdateTask($task_id: Int!, $assignedUser: Int!) {
+                updateTask(taskId: $task_id, updateInput: { assignedUser: $assignedUser }) {
+                    id,
+                    assignedTo
+                }
+            }
+        """,
+        "variables": {"task_id": 3, "assignedUser": 1}
+    })
 
     return tasks
 

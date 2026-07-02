@@ -3,12 +3,13 @@ from datetime import datetime
 import strawberry
 from strawberry import Info
 
-from app.enums import Priority as TaskPriority, TaskStatus
+from app.enums import Priority as TaskPriority, TaskStatus, TaskSortOption, SortDirection
 from app.graphql.types.project import Project
 
 Status = strawberry.enum(TaskStatus)
 Priority = strawberry.enum(TaskPriority)
-
+SortOption = strawberry.enum(TaskSortOption)
+SortOrder = strawberry.enum(SortDirection)
 
 @strawberry.type
 class Task:
@@ -27,6 +28,7 @@ class Task:
     async def project(self, request: Info) -> Project:
         return await request.context.project_loader.load(self.project_id)
 
+
 @strawberry.input
 class UpdateTaskInput:
     title: str | None = None
@@ -42,3 +44,9 @@ class TaskFilterInput:
     assigned_to: int | None = None
     status: Status | None = None
     priority: Priority | None = None
+
+
+@strawberry.input
+class TaskSortInput:
+    sort: TaskSortOption | None = None
+    direction: SortOrder | None = None

@@ -2,7 +2,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, StringConstraints, field_validator
 
-from app.enums import Priority, TaskStatus
+from app.enums import Priority, TaskStatus, TaskSortOption, SortDirection
 
 
 class CreateTask(BaseModel):
@@ -31,3 +31,8 @@ class TaskFilter(BaseModel):
     assigned_to: int | None
     status: TaskStatus | None
     priority: Priority | None
+
+
+class TaskSort(BaseModel):
+    sort_by: TaskSortOption | None
+    order: SortDirection | None

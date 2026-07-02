@@ -16,3 +16,16 @@ class Priority(int, Enum):
     HIGH = 1
     MEDIUM = 2
     LOW = 3
+
+
+class SortDirection(str, Enum):
+    ASCENDING = "ASCENDING"
+    DESCENDING = "DESCENDING"
+
+
+class TaskSortOption(str, Enum):
+    ID = "ID"
+    USER = "USER"
+    PROJECT_ID = "PROJECT_ID"
+    STATUS = "STATUS"
+    PRIORITY = "PRIORITY"

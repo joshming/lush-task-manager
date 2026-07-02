@@ -2,18 +2,36 @@ from datetime import datetime, timezone
 from typing import Any
 
 from asyncpg import ForeignKeyViolationError, UniqueViolationError
-from sqlalchemy import select, Select
+from sqlalchemy import select, Select, case, asc, desc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 
 from app import TaskDAO, User
-from app.enums import TaskStatus
+from app.enums import TaskStatus, TaskSortOption, SortDirection
 from app.graphql.types.task import Task
-from app.schemas.task import CreateTask, UpdateTask, TaskFilter
+from app.schemas.task import CreateTask, UpdateTask, TaskFilter, TaskSort
 from app.services.entity_exceptions import ProjectNotFound, UserNotFound, UnauthorizedTaskException, \
     DuplicateTaskException, RefreshException
 from app.services.entity_exceptions import TaskNotFound
+
+PRIORITY_ORDER = case(
+    {
+        "HIGH": 3,
+        "MEDIUM": 2,
+        "LOW": 1,
+    },
+    value=TaskDAO.priority
+)
+
+STATUS_ORDER = case(
+    {
+        "TODO": 1,
+        "PROGRESS": 2,
+        "CLOSED": 3,
+    },
+    value=TaskDAO.status
+)
 
 
 def create_task(task_dao: TaskDAO) -> Task:
@@ -35,26 +53,43 @@ def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def apply_filters(task_filter: TaskFilter | None) -> Select[tuple[Any]]:
-    if not task_filter:
+def apply_filters(task_filter: TaskFilter | None, sort: TaskSort | None) -> Select[tuple[Any]]:
+    if not task_filter and not sort:
         return select(TaskDAO)
 
     query = select(TaskDAO)
 
     conditions = []
-    if task_filter.project_id is not None:
-        conditions.append(TaskDAO.project_id == task_filter.project_id)
+    if task_filter:
+        if task_filter.project_id is not None:
+            conditions.append(TaskDAO.project_id == task_filter.project_id)
 
-    if task_filter.assigned_to is not None:
-        conditions.append(TaskDAO.assigned_to == task_filter.assigned_to)
+        if task_filter.assigned_to is not None:
+            conditions.append(TaskDAO.assigned_to == task_filter.assigned_to)
 
-    if task_filter.status is not None:
-        conditions.append(TaskDAO.status == task_filter.status)
+        if task_filter.status is not None:
+            conditions.append(TaskDAO.status == task_filter.status)
 
-    if task_filter.priority is not None:
-        conditions.append(TaskDAO.priority == task_filter.priority)
+        if task_filter.priority is not None:
+            conditions.append(TaskDAO.priority == task_filter.priority)
 
-    return query.where(*conditions)
+    if not sort or not sort.sort_by:
+        return query.where(*conditions)
+
+    direction = SortDirection.ASCENDING if not sort.order else sort.order
+    match sort.sort_by:
+        case TaskSortOption.PRIORITY:
+            return query.where(*conditions).order_by(asc(PRIORITY_ORDER) if direction == SortDirection.ASCENDING else desc(PRIORITY_ORDER))
+        case TaskSortOption.STATUS:
+            return query.where(*conditions).order_by(asc(STATUS_ORDER) if direction == SortDirection.ASCENDING else desc(STATUS_ORDER))
+        case TaskSortOption.ID:
+            return query.where(*conditions).order_by(asc(TaskDAO.id) if direction == SortDirection.ASCENDING else desc(TaskDAO.id))
+        case TaskSortOption.USER:
+            return query.where(*conditions).order_by(asc(TaskDAO.assigned_to).nullslast() if direction == SortDirection.ASCENDING else desc(TaskDAO.assigned_to).nullsfirst())
+        case TaskSortOption.PROJECT_ID:
+            return query.where(*conditions).order_by(asc(TaskDAO.project_id) if direction == SortDirection.ASCENDING else desc(TaskDAO.project_id))
+        case _:
+            return query.where(*conditions)
 
 
 class TaskService:
@@ -71,8 +106,8 @@ class TaskService:
 
         return create_task(task_dao)
 
-    async def get_tasks(self, task_filter: TaskFilter | None) -> list[Task]:
-        query = apply_filters(task_filter)
+    async def get_tasks(self, task_filter: TaskFilter | None, sort: TaskSort | None) -> list[Task]:
+        query = apply_filters(task_filter, sort)
 
         result = await self._db.execute(query)
 

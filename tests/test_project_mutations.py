@@ -1,3 +1,5 @@
+from typing import List
+
 from httpx import AsyncClient
 
 CREATE_PROJECT_MUTATION = """
@@ -31,7 +33,7 @@ DELETE_PROJECT_MUTATION = """
 
 class TestProjectMutations:
 
-    async def test_create_project_valid_input(self, client: AsyncClient):
+    async def test_create_project_valid_input_then_create(self, client: AsyncClient, users: List[int]):
         response = await client.post("/tasks", json={
             "query": CREATE_PROJECT_MUTATION,
             "variables": {"title": "Test Project", "description": "A test project"}
@@ -40,7 +42,7 @@ class TestProjectMutations:
         assert "errors" not in data
         assert data["data"]["createProject"]["id"] is not None
 
-    async def test_create_project_missing_title(self, client: AsyncClient):
+    async def test_create_project_missing_title_then_reject(self, client: AsyncClient):
         response = await client.post("/tasks", json={
             "query": CREATE_PROJECT_MUTATION,
             "variables": {"title": "", "description": "A test project"}
@@ -48,7 +50,7 @@ class TestProjectMutations:
         data = response.json()
         assert "errors" in data
 
-    async def test_update_project_owned(self, client: AsyncClient, project: int):
+    async def test_update_project_owned_then_updated(self, client: AsyncClient, project: int):
         response = await client.post("/tasks", json={
             "query": UPDATE_PROJECT_MUTATION,
             "variables": {"projectId": project, "description": "updated project"}
@@ -58,7 +60,7 @@ class TestProjectMutations:
         assert "errors" not in data
         assert data["data"]["updateProject"]["id"] is not None
 
-    async def test_update_project_unowned(self, client: AsyncClient, project: int):
+    async def test_update_project_unowned_then_reject(self, client: AsyncClient, project: int):
         client.headers["X-User-Id"] = "2"
         response = await client.post("/tasks", json={
             "query": UPDATE_PROJECT_MUTATION,
@@ -68,7 +70,7 @@ class TestProjectMutations:
         data = response.json()
         assert "errors" in data
 
-    async def test_update_project_blank_title(self, client: AsyncClient, project: int):
+    async def test_update_project_blank_title_then_reject(self, client: AsyncClient, project: int):
         response = await client.post("/tasks", json={
             "query": UPDATE_PROJECT_MUTATION,
             "variables": {"projectId": project, "description": "updated project", "title": ""}
@@ -77,7 +79,7 @@ class TestProjectMutations:
         data = response.json()
         assert "errors" in data
 
-    async def test_delete_project_owned(self, client: AsyncClient, project: int):
+    async def test_delete_project_owned_then_deleted(self, client: AsyncClient, project: int):
         response = await client.post("/tasks", json={
             "query": DELETE_PROJECT_MUTATION,
             "variables": {"id": project}
@@ -86,7 +88,7 @@ class TestProjectMutations:
         data = response.json()
         assert "errors" not in data
 
-    async def test_delete_project_missing(self, client: AsyncClient):
+    async def test_delete_project_missing_then_error(self, client: AsyncClient):
         response = await client.post("/tasks", json={
             "query": DELETE_PROJECT_MUTATION,
             "variables": {"id": 1}
@@ -95,7 +97,7 @@ class TestProjectMutations:
         data = response.json()
         assert "errors" in data
 
-    async def test_delete_project_unowned(self, client: AsyncClient, project: int):
+    async def test_delete_project_unowned_then_reject(self, client: AsyncClient, project: int):
         client.headers["X-User-Id"] = "2"
         response = await client.post("/tasks", json={
             "query": DELETE_PROJECT_MUTATION,

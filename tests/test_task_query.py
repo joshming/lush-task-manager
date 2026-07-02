@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 from httpx import AsyncClient
 
@@ -10,7 +10,6 @@ TASK_QUERY = """
             description
             priority
             status
-            projectId
             assignedTo
             createdAt
             updatedAt
@@ -26,10 +25,28 @@ TASKS_QUERY = """
             description
             priority
             status
-            projectId
             assignedTo
             createdAt
             updatedAt
+        }
+    }
+"""
+
+TASKS_QUERY_WITH_PROJECTS = """
+    query Task {
+        tasks {
+            id
+            title
+            description
+            priority
+            status
+            assignedTo
+            createdAt
+            updatedAt
+            project {
+                id, 
+                title
+            }
         }
     }
 """
@@ -64,3 +81,27 @@ class TestTaskQuery:
         data = response.json()
         assert "errors" not in data
         assert data["data"]["tasks"] != []
+
+    async def test_get_tasks_batched_projects(self, client: AsyncClient, tasks: List[int], query_counter: Dict[str, int]):
+        response = await client.post("/tasks", json={
+            "query": TASKS_QUERY_WITH_PROJECTS,
+            "variables": {},
+        })
+
+        data = response.json()
+        assert "errors" not in data
+        assert data["data"]["tasks"] != []
+
+        assert query_counter["queries"] == 2
+
+    async def test_get_tasks_no_projects(self, client: AsyncClient, tasks: List[int], query_counter: Dict[str, int]):
+        response = await client.post("/tasks", json={
+            "query": TASKS_QUERY,
+            "variables": {},
+        })
+
+        data = response.json()
+        assert "errors" not in data
+        assert data["data"]["tasks"] != []
+
+        assert query_counter["queries"] == 1

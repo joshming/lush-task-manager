@@ -3,6 +3,7 @@ from typing import List, Any, AsyncGenerator
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncEngine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.types import BigInteger
@@ -162,3 +163,24 @@ async def tasks(client: AsyncClient, projects: List[int]) -> List[int]:
         t2.json()["data"]["createTask"]["id"],
         t3.json()["data"]["createTask"]["id"],
     ]
+
+
+@pytest.fixture
+def query_counter(engine: AsyncEngine):
+    count = {"queries": 0}
+
+    def before_cursor_execute(
+            conn,
+            cursor,
+            statement,
+            parameters,
+            context,
+            executemany,
+    ):
+        count["queries"] += 1
+
+    event.listen(engine.sync_engine, "before_cursor_execute", before_cursor_execute)
+
+    yield count
+
+    event.remove(engine.sync_engine, "before_cursor_execute", before_cursor_execute)

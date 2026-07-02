@@ -13,8 +13,8 @@ class Project:
     description: str | None
     status: Status
     created_by: int
-    created_date: datetime
-    updated_date: datetime
+    created_at: datetime
+    updated_at: datetime
 
 @strawberry.input
 class UpdateProjectInput:

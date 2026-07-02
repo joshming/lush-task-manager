@@ -17,8 +17,8 @@ def create_project(project_dao: ProjectDAO) -> Project:
         description=project_dao.description,
         status=project_dao.status,
         created_by=project_dao.created_by,
-        created_date=project_dao.created_at,
-        updated_date=project_dao.updated_at
+        created_at=project_dao.created_at,
+        updated_at=project_dao.updated_at
     )
 
 class ProjectService:

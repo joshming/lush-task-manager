@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, Select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import ProjectDAO, TaskDAO, User
 from app.enums import TaskStatus
 from app.graphql.types.task import Task
-from app.schemas.task import CreateTask, UpdateTask
+from app.schemas.task import CreateTask, UpdateTask, TaskFilter
 from app.services.entity_exceptions import ProjectNotFound, UserNotFound, UnauthorizedTaskException
 from app.services.entity_exceptions import TaskNotFound
 
@@ -30,6 +31,28 @@ def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def apply_filters(task_filter: TaskFilter | None) -> Select[tuple[Any]]:
+    if not task_filter:
+        return select(TaskDAO)
+
+    query = select(TaskDAO)
+
+    conditions = []
+    if task_filter.project_id is not None:
+        conditions.append(TaskDAO.project_id == task_filter.project_id)
+
+    if task_filter.assigned_to is not None:
+        conditions.append(TaskDAO.assigned_to == task_filter.assigned_to)
+
+    if task_filter.status is not None:
+        conditions.append(TaskDAO.status == task_filter.status)
+
+    if task_filter.priority is not None:
+        conditions.append(TaskDAO.priority == task_filter.priority)
+
+    return query.where(*conditions)
+
+
 class TaskService:
     _db: AsyncSession
 
@@ -44,10 +67,12 @@ class TaskService:
 
         return create_task(task_dao)
 
-    async def get_tasks(self) -> list[Task]:
-        query = await self._db.execute(select(TaskDAO))
+    async def get_tasks(self, task_filter: TaskFilter | None) -> list[Task]:
+        query = apply_filters(task_filter)
 
-        task_daos = query.scalars()
+        result = await self._db.execute(query)
+
+        task_daos = result.scalars()
         if not task_daos:
             return []
 

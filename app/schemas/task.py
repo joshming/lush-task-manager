@@ -25,3 +25,9 @@ class UpdateTask(BaseModel):
         if v is not None and v.strip() == "":
             raise ValueError("title cannot be empty")
         return v
+
+class TaskFilter(BaseModel):
+    project_id: int | None
+    assigned_to: int | None
+    status: TaskStatus | None
+    priority: Priority | None

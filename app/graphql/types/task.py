@@ -34,3 +34,11 @@ class UpdateTaskInput:
     assigned_user: int | None = None
     priority: Priority | None = None
     status: Status | None = None
+
+
+@strawberry.input
+class TaskFilterInput:
+    project_id: int | None = None
+    assigned_to: int | None = None
+    status: Status | None = None
+    priority: Priority | None = None

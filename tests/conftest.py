@@ -2,13 +2,14 @@ from typing import List, Any, AsyncGenerator
 
 import pytest
 import pytest_asyncio
+from dotenv import variables
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncEngine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.types import BigInteger
 
-from app import Base
+from app import Base, User
 from app.main import app, get_current_user
 from database import get_db
 
@@ -23,7 +24,7 @@ def compile_big_int_sqlite(type_, compiler, **kw):
 
 @pytest_asyncio.fixture
 async def engine() -> AsyncEngine:
-    return create_async_engine(TEST_DATABASE_URL)
+    return create_async_engine(TEST_DATABASE_URL, echo=False)
 
 
 @pytest_asyncio.fixture
@@ -59,6 +60,18 @@ async def client(db_session):
         yield client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def users(db_session: AsyncSession) -> List[int]:
+    users = [
+        User(first_name="John", last_name="Smith"),
+        User(first_name="Jane", last_name="Doe")
+    ]
+
+    db_session.add_all(users)
+    await db_session.commit()
+    return [user.id for user in users]
 
 
 @pytest.fixture
@@ -127,7 +140,7 @@ async def task(client: AsyncClient, project: int) -> int:
 
 
 @pytest.fixture
-async def tasks(client: AsyncClient, projects: List[int]) -> List[int]:
+async def tasks(client: AsyncClient, projects: List[int], users: List[int]) -> List[int]:
     t1 = await client.post("/tasks", json={
         "query": """
                 mutation {
@@ -158,11 +171,28 @@ async def tasks(client: AsyncClient, projects: List[int]) -> List[int]:
             """
     })
 
-    return [
+    tasks = [
         t1.json()["data"]["createTask"]["id"],
         t2.json()["data"]["createTask"]["id"],
         t3.json()["data"]["createTask"]["id"],
     ]
+
+    for task in tasks:
+        assigned_task = await client.post("/tasks", json={
+            "query": """
+                mutation UpdateTask($task_id: Int!, $assignedUser: Int!) {
+                    updateTask(taskId: $task_id, updateInput: { assignedUser: $assignedUser }) {
+                        id,
+                        assignedTo
+                    }
+                }
+            """,
+            "variables": {"task_id": task, "assignedUser": 1}
+        })
+
+        assigned_task.json()["data"]["updateTask"]["id"]
+
+    return tasks
 
 
 @pytest.fixture

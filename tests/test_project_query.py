@@ -25,7 +25,7 @@ PROJECTS_QUERY = """
 
 class TestProjectQuery:
 
-    async def test_get_project_by_id_exists(self, client: AsyncClient, project: int):
+    async def test_get_project_by_id_exists_return_project(self, client: AsyncClient, project: int):
         response = await client.post("/tasks", json={
             "query": PROJECT_QUERY,
             "variables": {"project_id": project},
@@ -35,7 +35,7 @@ class TestProjectQuery:
         assert data["data"]["project"]["id"] is not None
         assert data["data"]["project"]["title"] is not None
 
-    async def test_get_tasks_none_inserted(self, client: AsyncClient):
+    async def test_get_tasks_none_inserted_return_empty_list(self, client: AsyncClient):
         response = await client.post("/tasks", json={
             "query": PROJECTS_QUERY,
             "variables": {},
@@ -44,7 +44,7 @@ class TestProjectQuery:
         assert "errors" not in data
         assert data["data"]["projects"] == []
 
-    async def test_get_tasks_multiple(self, client: AsyncClient, projects: List[int]):
+    async def test_get_tasks_multiple_return_populated_list(self, client: AsyncClient, projects: List[int]):
         response = await client.post("/tasks", json={
             "query": PROJECTS_QUERY,
             "variables": {},

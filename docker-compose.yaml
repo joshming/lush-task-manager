@@ -16,6 +16,24 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DB_URL: postgresql+asyncpg://lush:SOAP>REST@db:5432/project_management
+      RATE_LIMITING_ENABLED: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+  migrate:
+    build: .
+    command: uv run alembic upgrade head
+    environment:
+      DB_URL: postgresql+asyncpg://lush:SOAP>REST@db:5432/project_management
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:

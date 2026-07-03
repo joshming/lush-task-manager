@@ -1,5 +1,14 @@
 # Lush Task Manager
 
+## Running 
+
+The following commands will start up the application:
+
+```{shell}
+docker compose up -d
+/bin/bash users.sh
+```
+
 ## Requirements 
 
 ### Functional 
@@ -50,6 +59,10 @@
 - For a given project, multiple tasks with the same name doesn't make sense, instead they should be unique within a project
 - A functional index would have been ideal to get rid of the necessity of a "normalized" title field that's been set to lower case. However, due to SQLite testing set up and time limitations, normalized_title short-cut was taken instead
 
+### Wrapped Exceptions
+- I had made a bad assumption that error handling was done well through exception handling like one would do in something like Java Spring Boot
+- Upon my later research, I discovered that best-practice is through Annotated Union types. Now knowing this, I would have prepared for that at the beginning of this assignment. But with time coming to an end and the application generally complete, it would cause myself to go over the allotted time. 
+
 ### Rate Limiter Bonus 
 #### "Authorized" user based limiting
 - Assumption is that the user is always presenting this header and always authorized, therefore, this is more accurate than an IP, which can be spoofed with different VM's with different public IPs
@@ -62,9 +75,19 @@
 - In general though, a rate limiter is a key component to any user-facing service, preventing popular DDoS attacks and intense pressure on database
 - I limited mutations more than queries as typically, a write does consume more resources, but the amounts were arbitrary. Realistically, these limits would be chosen off of the systems capabilities / resources. 
 
-#### Trade off
+Trade off
 - In memory storage: for the sake of this assignment. Would be better with a redis cache or something equivalent to prevent loss of data on restart
 - General limits for mutations: different types of mutations would consume different amount of resources. In this exercise, I treated them all as the same
+
+#### Bonus / Nice to Have's not implemented
+##### Structured Logging / request tracing
+This is definitely an important feature in production -- it's my necessity when it comes to finding where a bug is coming from 
+- I would've added a UUID to be generated during the initialization of the context, which then could be logged throughout the request, helping a developer debug a particular issue as then they could find the origin. 
+  - It would go into the context as strawberry passes these to the resolvers and they are unique per request.
+
+##### Cursor based Pagination
+I would've added cursor-based paging as well if given the time. This would allow the user's to view the tasks in a paged order, without seeing duplicates due to a concurrent write.
+- A trade off of adding pagination is usually that there is a "total" field in the response. to get the total would be an additional database round-trip and would add extra latency
 
 ## Testing
 

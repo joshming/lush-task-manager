@@ -1,3 +1,5 @@
+import logging
+
 import strawberry
 from fastapi import FastAPI, Depends, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +14,8 @@ from app.graphql.schemas import Query, Mutation
 from app.services.project_service import ProjectService
 from app.services.task_service import TaskService
 from database import get_db
+
+LOG = logging.getLogger(__name__)
 
 
 async def get_current_user(request: Request) -> int:

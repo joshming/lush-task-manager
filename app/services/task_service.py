@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 
-from app import TaskDAO, User
+from app import TaskDAO
 from app.enums import TaskStatus, TaskSortOption, SortDirection
 from app.graphql.types.task import Task
 from app.schemas.task import CreateTask, UpdateTask, TaskFilter, TaskSort
@@ -88,8 +88,6 @@ def apply_filters(task_filter: TaskFilter | None, sort: TaskSort | None) -> Sele
             return query.where(*conditions).order_by(asc(TaskDAO.assigned_to).nullslast() if direction == SortDirection.ASCENDING else desc(TaskDAO.assigned_to).nullsfirst())
         case TaskSortOption.PROJECT_ID:
             return query.where(*conditions).order_by(asc(TaskDAO.project_id) if direction == SortDirection.ASCENDING else desc(TaskDAO.project_id))
-        case _:
-            return query.where(*conditions)
 
 
 class TaskService:

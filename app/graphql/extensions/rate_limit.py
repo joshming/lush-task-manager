@@ -1,9 +1,13 @@
+import os
+
 from httpx import Request
 from limits import parse
 from limits.storage import MemoryStorage
 from limits.strategies import FixedWindowRateLimiter
 from slowapi.util import get_remote_address
 from strawberry.extensions import SchemaExtension
+
+RATE_LIMITING_ENABLED = os.getenv("RATE_LIMITING_ENABLED", "true").lower() == "true"
 
 LIMITS = {
     "query": parse("120/minute"),
@@ -28,6 +32,8 @@ def get_client_key(request: Request) -> str:
 
 class RateLimitExtension(SchemaExtension):
     async def on_execute(self) -> None:
+        if not RATE_LIMITING_ENABLED:
+            return
         request: Request = self.execution_context.context.request
         client_key = get_client_key(request)
 

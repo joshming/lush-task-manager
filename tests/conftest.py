@@ -2,7 +2,6 @@ from typing import List, Any, AsyncGenerator
 
 import pytest
 import pytest_asyncio
-from dotenv import variables
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncEngine
@@ -10,7 +9,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.types import BigInteger
 
 from app import Base, User
-from app.main import app, get_current_user
+from app.main import app
 from database import get_db
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

@@ -4,7 +4,6 @@ from strawberry.types import Info
 
 from app.context import TaskManagementContext
 from app.graphql.types.project import Project, UpdateProjectInput
-from app.models import user
 from app.schemas.project import CreateProject, UpdateProject
 
 

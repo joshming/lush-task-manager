@@ -6,6 +6,7 @@ from app.enums import ProjectStatus
 
 Status = strawberry.enum(ProjectStatus)
 
+
 @strawberry.type
 class Project:
     id: int
@@ -15,6 +16,7 @@ class Project:
     created_by: int
     created_at: datetime
     updated_at: datetime
+
 
 @strawberry.input
 class UpdateProjectInput:

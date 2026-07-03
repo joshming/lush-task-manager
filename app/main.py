@@ -7,6 +7,7 @@ from strawberry.fastapi import GraphQLRouter
 
 from app.context import TaskManagementContext
 from app.dataloaders.project_loader import get_project_loader
+from app.graphql.extensions.rate_limit import RateLimitExtension
 from app.graphql.schemas import Query, Mutation
 from app.services.project_service import ProjectService
 from app.services.task_service import TaskService
@@ -39,7 +40,7 @@ async def get_task_management_context(current_user: int = Depends(get_current_us
     return TaskManagementContext(current_user, task_service, project_service, project_loader)
 
 
-schema = strawberry.Schema(query=Query, mutation=Mutation)
+schema = strawberry.Schema(query=Query, mutation=Mutation, extensions=[RateLimitExtension])
 
 task_management = GraphQLRouter(schema=schema, context_getter=get_task_management_context)
 

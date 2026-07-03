@@ -38,6 +38,7 @@
 - Optimistic locking is a good approach to ensuring concurrent writes are not overwritten by each other. Using an incremental version instead of timestamps is both simpler, and it avoids server time drifts.
 - If pessimistic locking were used, many users would not be able to efficiently view the same task as it would be locked on a read level. 
 - Downstream, optimistic locking prevents deadlocks as the lock is not acquired at read level.
+- This was not implemented on projects despite mutation availability. Although a project can only be edited by the creator, there is the chance that concurrent requests go off. To prevent another migration script and for time constraints, I have omitted this feature. 
 
 ### Heavy integration testing 
 - With the requirements of this application, there are not many components that have meaningful areas to unit test. More value comes from integration tests that can test the flow from request to datbase.
@@ -48,6 +49,22 @@
   - A project should be re-opened if a user needs the same one 
 - For a given project, multiple tasks with the same name doesn't make sense, instead they should be unique within a project
 - A functional index would have been ideal to get rid of the necessity of a "normalized" title field that's been set to lower case. However, due to SQLite testing set up and time limitations, normalized_title short-cut was taken instead
+
+### Rate Limiter Bonus 
+#### "Authorized" user based limiting
+- Assumption is that the user is always presenting this header and always authorized, therefore, this is more accurate than an IP, which can be spoofed with different VM's with different public IPs
+- trade off: if unauthorized users without the header were allowed to make a request, than the rate limiting would be ineffective 
+  - anonymous requests default to ip
+  
+#### Reason for implementation
+- I was watching system design videos and coincidentally came across a GraphQL vs REST video. A specific point was that a rate limiter is non-trivial in a graphql service due to a singular endpoint
+  - this made complete sense, and sparked interest and I wanted to implement one for my own learning
+- In general though, a rate limiter is a key component to any user-facing service, preventing popular DDoS attacks and intense pressure on database
+- I limited mutations more than queries as typically, a write does consume more resources, but the amounts were arbitrary. Realistically, these limits would be chosen off of the systems capabilities / resources. 
+
+#### Trade off
+- In memory storage: for the sake of this assignment. Would be better with a redis cache or something equivalent to prevent loss of data on restart
+- General limits for mutations: different types of mutations would consume different amount of resources. In this exercise, I treated them all as the same
 
 ## Testing
 
